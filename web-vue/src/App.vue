@@ -1,120 +1,152 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useInventoryStore } from './stores/inventory'
-import { useItemsStore } from './stores/items'
+import { ref, onMounted } from 'vue';
 import InventoryComponent from './components/inventory/InventoryComponent.vue'
-import { fetchNui } from './utils/fetchNui'
+import DragHandler from './components/utils/DragHandler.vue'
+import KeyPressHandler from './components/utils/KeyPressHandler.vue'
+import { debugData } from './utils/debugData';
+import { useInventoryStore } from './stores/inventory';
+import { useItemsStore } from './stores/items';
+import useNuiEvent from './composables/useNuiEvent';
+import { fetchNui } from './utils/fetchNui';
+import type { Inventory } from './typings';
+import { setImagePath } from './helpers';
 
-// For debugging purposes, initialize with some test data
-const inventory = useInventoryStore()
+// Get stores for state management
+const inventoryStore = useInventoryStore()
 const itemsStore = useItemsStore()
 
-// Setup test data similar to how the React version does it
-onMounted(() => {
-  // Simulate initial data
-  const debugItems = {
-    water: {
-      name: 'water',
-      close: false,
-      label: 'Water',
-      stack: true,
-      usable: true,
-      count: 0,
-    },
-    burger: {
-      name: 'burger',
-      close: false,
-      label: 'Burger',
-      stack: false,
-      usable: false,
-      count: 0,
-    },
-    iron: {
-      name: 'iron',
-      label: 'Iron',
-      stack: true,
-      usable: false,
-      close: false,
-      count: 0
-    },
-    copper: {
-      name: 'copper',
-      label: 'Copper',
-      stack: true,
-      usable: false,
-      close: false,
-      count: 0
-    },
-    powersaw: {
-      name: 'powersaw',
-      label: 'Power Saw',
-      stack: false,
-      usable: true,
-      close: false,
-      count: 0
-    },
+// Initialize UI loaded state
+const uiLoaded = ref(false)
+
+// Handle init event from server
+useNuiEvent<{
+  locale: { [key: string]: string }
+  items: Record<string, any>
+  leftInventory: Inventory
+  imagepath: string
+}>('init', ({ locale, items, leftInventory, imagepath }) => {
+  
+  for (const name in items) {
+    itemsStore.setItem(name, items[name])
   }
   
-  itemsStore.setItems(debugItems)
-
-  inventory.setupInventory({
-    leftInventory: {
-      id: 'test',
-      type: 'player',
-      slots: 50,
-      label: 'Bob Smith',
-      weight: 3000,
-      maxWeight: 5000,
-      items: [
-        {
-          slot: 1,
-          name: 'iron',
-          weight: 3000,
-          metadata: {
-            description: 'Iron ore material',
-            ammo: 3,
-          },
-          count: 5,
-        },
-        { 
-          slot: 2, 
-          name: 'powersaw', 
-          weight: 500, 
-          count: 1, 
-          metadata: { durability: 75 } 
-        },
-        { 
-          slot: 3, 
-          name: 'copper', 
-          weight: 100, 
-          count: 12, 
-          metadata: { type: 'Special' } 
-        },
-        {
-          slot: 4,
-          name: 'water',
-          weight: 100,
-          count: 3,
-          metadata: { description: 'Fresh drinking water' },
-        },
-        { 
-          slot: 5, 
-          name: 'water', 
-          weight: 100, 
-          count: 1 
-        },
-      ],
-    }
-  })
-
-  // Signal that UI is loaded
-  fetchNui('uiLoaded', {})
+  // Set image path and initialize inventory
+  setImagePath(imagepath)
+  inventoryStore.setupInventory({ leftInventory })
 })
+
+// Handle inventory setup
+useNuiEvent<{
+  leftInventory?: Inventory
+  rightInventory?: Inventory
+}>('setupInventory', (data) => {
+  inventoryStore.setupInventory(data)
+})
+
+// Handle slot refresh events
+useNuiEvent('refreshSlots', (data) => {
+  inventoryStore.refreshSlots(data)
+})
+
+// Handle metadata display updates
+useNuiEvent<Array<{ metadata: string; value: string }>>('displayMetadata', (data) => {
+  inventoryStore.setAdditionalMetadata(data)
+})
+
+// Handle inventory close event
+useNuiEvent('closeInventory', () => {
+  // Close any open menus or tooltips
+})
+
+// Notify server that UI has loaded
+fetchNui('uiLoaded', {})
+
+// For development purposes, initialize with test data when in browser environment
+debugData([
+  {
+    action: 'setupInventory',
+    data: {
+      leftInventory: {
+        id: 'test',
+        type: 'player',
+        slots: 50,
+        label: 'Bob Smith',
+        weight: 3000,
+        maxWeight: 5000,
+        items: [
+          {
+            slot: 1,
+            name: 'iron',
+            weight: 3000,
+            metadata: {
+              description: `name: Svetozar Miletic  \n Gender: Male`,
+              ammo: 3,
+              mustard: '60%',
+              ketchup: '30%',
+              mayo: '10%',
+            },
+            count: 5,
+          },
+          { slot: 2, name: 'powersaw', weight: 0, count: 1, metadata: { durability: 75 } },
+          { slot: 3, name: 'copper', weight: 100, count: 12, metadata: { type: 'Special' } },
+          {
+            slot: 4,
+            name: 'water',
+            weight: 100,
+            count: 1,
+            metadata: { description: 'Generic item description' },
+          },
+          { slot: 5, name: 'water', weight: 100, count: 1 },
+          {
+            slot: 6,
+            name: 'backwoods',
+            weight: 100,
+            count: 1,
+            metadata: {
+              label: 'Russian Cream',
+              imageurl: 'https://i.imgur.com/2xHhTTz.png',
+            },
+          },
+        ],
+      },
+      rightInventory: {
+        id: 'shop',
+        type: 'crafting',
+        slots: 5000,
+        label: 'Bob Smith',
+        weight: 3000,
+        maxWeight: 5000,
+        items: [
+          {
+            slot: 1,
+            name: 'lockpick',
+            weight: 500,
+            price: 300,
+            ingredients: {
+              iron: 5,
+              copper: 12,
+              powersaw: 0.1,
+            },
+            metadata: {
+              description: 'Simple lockpick that breaks easily and can pick basic door locks',
+            },
+          },
+        ],
+      },
+    },
+  },
+]);
+
+// Prevent default HTML5 drag behavior
+const preventDefault = (event: DragEvent) => event.preventDefault()
+window.addEventListener('dragstart', preventDefault)
 </script>
 
 <template>
   <div class="app-wrapper bg-slate-900 text-white min-h-screen">
     <InventoryComponent />
+    <DragHandler />
+    <KeyPressHandler />
   </div>
 </template>
 

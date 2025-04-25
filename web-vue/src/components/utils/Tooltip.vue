@@ -1,107 +1,95 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { useTooltipStore } from '../../stores/tooltip'
 import { useItemsStore } from '../../stores/items'
+import { getImageUrl } from '../../helpers'
 
+// Get stores
 const tooltipStore = useTooltipStore()
 const itemsStore = useItemsStore()
 
-// Get current tooltip state
-const isOpen = computed(() => tooltipStore.isOpen)
-const item = computed(() => tooltipStore.currentItem)
-const inventoryType = computed(() => tooltipStore.currentInventoryType)
+// Computed properties
+const visible = computed(() => tooltipStore.visible)
+const item = computed(() => tooltipStore.item)
+const position = computed(() => tooltipStore.position)
 
-// Track mouse position
-const mousePosition = ref({ x: 0, y: 0 })
-
-// Handle mouse movement to update position
-function handleMouseMove(event: MouseEvent) {
-  mousePosition.value = {
-    x: event.clientX,
-    y: event.clientY
-  }
-}
-
-// Set up and tear down event listeners
-onMounted(() => {
-  window.addEventListener('mousemove', handleMouseMove)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('mousemove', handleMouseMove)
-})
-
-// Calculate tooltip position
+// Calculate tooltip styles based on position
 const tooltipStyle = computed(() => {
-  return {
-    top: `${Math.min(window.innerHeight - 250, mousePosition.value.y)}px`,
-    left: `${Math.min(window.innerWidth - 250, mousePosition.value.x + 20)}px`
+  if (!position.value) return {}
+  
+  // Basic positioning
+  const style: Record<string, any> = {
+    left: `${position.value.x + 10}px`,
+    top: `${position.value.y + 10}px`,
   }
+  
+  return style
 })
 
 // Get item data
-const itemData = computed(() => {
-  if (!item.value || !item.value.name) return null
-  return itemsStore.items[item.value.name]
-})
+const getItemInfo = (name: string) => {
+  return itemsStore.getItem(name)
+}
 
-// Get item description from metadata or item data
-const description = computed(() => {
-  if (!item.value) return null
-  return item.value.metadata?.description || itemData.value?.description
-})
+// Format metadata for display
+const formatMetadata = (metadata: Record<string, any>) => {
+  if (!metadata) return []
+  
+  return Object.entries(metadata)
+    .filter(([key]) => !['description', 'imageurl', 'image'].includes(key))
+    .map(([key, value]) => ({ key, value }))
+}
 </script>
 
 <template>
-  <teleport to="body">
-    <div 
-      v-if="isOpen && item" 
-      class="tooltip-wrapper fixed z-50 bg-slate-800 rounded shadow-lg p-3 max-w-xs border border-slate-700"
-      :style="tooltipStyle"
-    >
-      <!-- Header -->
-      <div class="tooltip-header flex justify-between mb-2 font-medium text-white">
-        <p>{{ item.metadata?.label || itemData?.label || item.name }}</p>
-        <p v-if="item.metadata?.type">{{ item.metadata.type }}</p>
+  <div v-if="visible && item" 
+    class="tooltip bg-gray-800 text-white rounded p-3 shadow-lg absolute z-50"
+    :style="tooltipStyle">
+    
+    <div class="flex gap-3">
+      <!-- Item image -->
+      <div v-if="item" class="w-16 h-16 bg-cover rounded" 
+        :style="{ backgroundImage: `url(${getImageUrl(item)})` }">
       </div>
       
-      <!-- Divider -->
-      <div class="tooltip-divider h-px bg-slate-700 mb-2"></div>
-      
-      <!-- Description -->
-      <div v-if="description" class="tooltip-description text-sm mb-2 text-gray-300">
-        <p>{{ description }}</p>
-      </div>
-      
-      <!-- Item properties -->
-      <div class="tooltip-details text-sm text-gray-300">
-        <!-- Durability -->
-        <p v-if="item.durability !== undefined" class="mb-1">
-          Durability: {{ Math.trunc(item.durability) }}
-        </p>
+      <!-- Item info -->
+      <div class="flex flex-col">
+        <!-- Item name -->
+        <h3 class="text-lg font-bold">
+          {{ item?.label || item?.name }}
+        </h3>
         
-        <!-- Ammo info -->
-        <p v-if="item.metadata?.ammo !== undefined" class="mb-1">
-          Ammo: {{ item.metadata.ammo }}
-        </p>
+        <!-- Item weight -->
+        <div class="text-sm text-gray-300">
+          Weight: {{ item?.weight || 0 }}
+        </div>
         
-        <!-- Serial number -->
-        <p v-if="item.metadata?.serial" class="mb-1">
-          Serial: {{ item.metadata.serial }}
-        </p>
-        
-        <!-- Other metadata -->
-        <template v-if="item.metadata">
-          <p 
-            v-for="(value, key) in item.metadata"
-            :key="key"
-            class="mb-1"
-            v-if="!['label', 'description', 'serial', 'ammo'].includes(key)"
-          >
-            {{ key }}: {{ value }}
-          </p>
-        </template>
+        <!-- Item info from item data -->
+        <div v-if="getItemInfo(item?.name)" class="text-sm text-gray-300">
+          {{ getItemInfo(item?.name)?.description }}
+        </div>
       </div>
     </div>
-  </teleport>
+    
+    <!-- Item description from metadata -->
+    <div v-if="item?.metadata?.description" class="mt-2 text-sm text-gray-300">
+      {{ item.metadata.description }}
+    </div>
+    
+    <!-- Metadata list -->
+    <div v-if="item?.metadata" class="mt-2">
+      <div v-for="(meta, index) in formatMetadata(item.metadata)" :key="index" 
+        class="flex justify-between text-sm">
+        <span class="text-gray-400">{{ meta.key }}:</span>
+        <span>{{ meta.value }}</span>
+      </div>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.tooltip {
+  min-width: 200px;
+  max-width: 300px;
+}
+</style>

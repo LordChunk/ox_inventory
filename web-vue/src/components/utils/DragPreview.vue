@@ -1,73 +1,38 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
-import { useDragStore } from '../../stores/dragAndDrop'
-import { useItemsStore } from '../../stores/items'
+import { ref, computed } from 'vue'
+import { useDragStore } from '../../stores/drag'
 
+// Get the drag state from store
 const dragStore = useDragStore()
-const itemsStore = useItemsStore()
 
-// Get current drag state
+// Computed values from drag store
 const isDragging = computed(() => dragStore.isDragging)
-const source = computed(() => dragStore.currentSource)
+const draggedItem = computed(() => dragStore.currentItem)
 const position = computed(() => dragStore.currentPosition)
+const image = computed(() => dragStore.image)
 
-// Add a global event listener for mousemove to update drag position
-function handleMouseMove(event: MouseEvent) {
-  dragStore.updateDragPosition({
-    x: event.clientX,
-    y: event.clientY
-  })
-}
-
-// Set up event listeners
-onMounted(() => {
-  window.addEventListener('mousemove', handleMouseMove)
-  window.addEventListener('mouseup', handleDragEnd)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('mousemove', handleMouseMove)
-  window.removeEventListener('mouseup', handleDragEnd)
-})
-
-// Handle drag end when mouse released
-function handleDragEnd() {
-  if (isDragging.value) {
-    dragStore.endDrag()
-  }
-}
-
-// Calculate drag preview position - fix the positioning to be at the cursor
-const previewStyle = computed(() => {
-  if (!position.value) return {}
+// If you need custom styling beyond position
+const style = computed(() => {
+  if (!isDragging.value || !position.value) return {}
   
-  // Position the item so the center of the preview is at the cursor
-  // Using a 20px offset to place the item slightly below and to the right of the cursor
   return {
-    left: `${position.value.x}px`,
-    top: `${position.value.y}px`,
-    transform: 'translate(-50%, -50%)', // Center the element on the cursor
-    backgroundImage: source.value?.image ? source.value.image : 'none'
+    transform: `translate(${position.value.x}px, ${position.value.y}px)`,
+    backgroundImage: image.value,
   }
 })
-
-// Get item url for the dragged item
-function getImageUrl(itemName: string): string {
-  // For demo, returning a placeholder
-  return `https://via.placeholder.com/100?text=${itemName}`
-}
 </script>
 
 <template>
-  <div 
-    v-if="isDragging && source && position"
-    class="item-drag-preview fixed pointer-events-none z-50 bg-cover bg-center"
-    style="width: 40px; height: 40px; opacity: 0.8;"
-    :style="previewStyle"
-  >
-    <!-- Optionally add item count or other information -->
-    <div class="bg-black/50 text-white text-xs absolute bottom-0 right-0 px-1">
-      {{ source.item.name }}
-    </div>
+  <div v-if="isDragging && position && draggedItem" 
+    class="item-drag-preview absolute pointer-events-none w-16 h-16 bg-cover" 
+    :style="style">
   </div>
 </template>
+
+<style scoped>
+.item-drag-preview {
+  z-index: 9999;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+}
+</style>

@@ -1,13 +1,13 @@
-import type { Inventory } from './inventory';
-import type { Slot, SlotWithItem } from './slot';
+import type { Inventory } from './inventory'
+import type { Slot, SlotWithItem } from './slot'
 
 export type DragSource = {
-  item: Pick<SlotWithItem, 'slot' | 'name'>;
-  inventory: Inventory['type'];
-  image?: string;
-};
+  item: Pick<SlotWithItem, 'slot' | 'name'>
+  inventory: Inventory['type']
+  image?: string
+}
 
 export type DropTarget = {
-  item: Pick<Slot, 'slot'>;
-  inventory: Inventory['type'];
-};
+  item: Pick<Slot, 'slot'>
+  inventory: Inventory['type']
+}

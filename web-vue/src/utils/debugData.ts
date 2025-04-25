@@ -1,8 +1,8 @@
-import { isEnvBrowser } from './misc';
+import { isEnvBrowser } from './misc'
 
 interface DebugEvent<T = any> {
-  action: string;
-  data: T;
+  action: string
+  data: T
 }
 
 /**
@@ -23,8 +23,8 @@ export const debugData = <P>(events: DebugEvent<P>[], timer = 1000): void => {
               data: event.data,
             },
           })
-        );
-      }, timer);
+        )
+      }, timer)
     }
   }
-};
+}
