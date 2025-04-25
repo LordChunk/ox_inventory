@@ -13,11 +13,11 @@ export const useTooltipStore = defineStore('tooltip', () => {
   const item = ref<SlotWithItem | null>(null)
   const inventoryType = ref<Inventory['type'] | null>(null)
   const position = ref<Position>({ x: 0, y: 0 })
-  
+
   // Method to show tooltip
-  function showTooltip(data: { 
-    item: SlotWithItem, 
-    inventoryType: Inventory['type'] 
+  function showTooltip(data: {
+    item: SlotWithItem,
+    inventoryType: Inventory['type']
   }) {
     item.value = data.item
     inventoryType.value = data.inventoryType
@@ -35,15 +35,15 @@ export const useTooltipStore = defineStore('tooltip', () => {
   function updatePosition(newPosition: Position) {
     position.value = newPosition
   }
-  
-  return { 
-    visible: isVisible, 
-    item, 
-    inventoryType, 
-    position, 
-    showTooltip, 
-    openTooltip: showTooltip, // Explicit alias for openTooltip pointing to showTooltip 
-    closeTooltip: hideTooltip, 
-    updatePosition 
+
+  return {
+    isVisible,
+    item,
+    inventoryType,
+    position,
+    showTooltip,
+    openTooltip: showTooltip, // Explicit alias for openTooltip pointing to showTooltip
+    closeTooltip: hideTooltip,
+    updatePosition
   }
 })

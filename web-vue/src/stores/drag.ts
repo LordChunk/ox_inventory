@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { reactive, ref, computed } from 'vue'
+import { ref, computed } from 'vue'
 import type { DragSource, DropTarget } from '../typings/dnd'
 import { fetchNui } from '../utils/fetchNui'
 import { useInventoryStore } from './inventory'
@@ -9,30 +9,34 @@ export const useDragStore = defineStore('drag', () => {
   const isDragging = ref(false)
   const currentItem = ref<DragSource | null>(null)
   const currentPosition = ref<{ x: number; y: number } | null>(null)
-  const image = ref<string | undefined>(undefined)
-  
+
   // Get inventory store
   const inventoryStore = useInventoryStore()
+
+  // Computed properties for consistent access
+  const currentSource = computed(() => currentItem.value)
+  const image = computed(() => currentItem.value?.image)
 
   // Start a drag operation
   function startDrag(source: DragSource, initialPosition: { x: number; y: number }) {
     isDragging.value = true
     currentItem.value = source
     currentPosition.value = initialPosition
-    image.value = source.image
   }
 
-  // Update position during drag
+  // Single method for updating position with alias for backward compatibility
   function updatePosition(position: { x: number; y: number }) {
-    currentPosition.value = position
+    if (isDragging.value) {
+      currentPosition.value = position
+    }
   }
 
   // Handle drop operation
-  function handleDrop(target: DropTarget): boolean {
+  function handleDrop(target: DropTarget) {
     if (!isDragging.value || !currentItem.value) return false
 
     const source = currentItem.value
-    
+
     // Process the drop based on inventory types
     if (source.inventory === 'shop' && target.inventory !== 'shop') {
       // Handle buying from shop
@@ -55,7 +59,7 @@ export const useDragStore = defineStore('drag', () => {
     } else if (source.inventory !== 'shop' && source.inventory !== 'crafting') {
       // Regular item movement - start optimistic update
       inventoryStore.setPending()
-      
+
       // Send request to server
       fetchNui('swapItems', {
         fromSlot: source.item.slot,
@@ -71,9 +75,15 @@ export const useDragStore = defineStore('drag', () => {
       })
     }
 
+    // Return data for components to use if needed
+    const result = {
+      source,
+      target
+    }
+
     // End the drag regardless of result
     endDrag()
-    return true
+    return result
   }
 
   // End drag operation
@@ -81,7 +91,6 @@ export const useDragStore = defineStore('drag', () => {
     isDragging.value = false
     currentItem.value = null
     currentPosition.value = null
-    image.value = undefined
   }
 
   return {
@@ -89,11 +98,13 @@ export const useDragStore = defineStore('drag', () => {
     isDragging,
     currentItem,
     currentPosition,
+    currentSource,
     image,
 
     // Actions
     startDrag,
     updatePosition,
+    updateDragPosition: updatePosition, // Alias for backward compatibility
     handleDrop,
     endDrag
   }
