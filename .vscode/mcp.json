@@ -1,8 +1,0 @@
-{
-    "servers": {
-        "mcp-vue-app": {
-            "type": "sse",
-            "url": "http://localhost:5173/__mcp/sse"
-        }
-    }
-}
