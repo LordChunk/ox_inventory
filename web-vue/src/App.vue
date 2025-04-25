@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import InventoryComponent from './components/inventory/InventoryComponent.vue'
 import DragHandler from './components/utils/DragHandler.vue'
 import KeyPressHandler from './components/utils/KeyPressHandler.vue'
+import MousePosition from './components/utils/MousePosition.vue'
 import { debugData } from './utils/debugData';
 import { useInventoryStore } from './stores/inventory';
 import { useItemsStore } from './stores/items';
@@ -147,6 +148,7 @@ window.addEventListener('dragstart', preventDefault)
     <InventoryComponent />
     <DragHandler />
     <KeyPressHandler />
+    <MousePosition />
   </div>
 </template>
 

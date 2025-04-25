@@ -1,47 +1,49 @@
 import { defineStore } from 'pinia'
-import { ref, reactive, computed } from 'vue'
-import type { SlotWithItem } from '../typings'
+import { ref } from 'vue'
+import type { SlotWithItem } from '../typings/slot'
+import type { Inventory } from '../typings/inventory'
+
+type Position = {
+  x: number
+  y: number
+}
 
 export const useTooltipStore = defineStore('tooltip', () => {
-  // Tooltip state
-  const visible = ref(false)
+  const isVisible = ref(false)
   const item = ref<SlotWithItem | null>(null)
-  const position = ref<{ x: number; y: number } | null>(null)
-
-  // Show the tooltip for an item
-  function showTooltip(itemData: SlotWithItem, mousePosition: { x: number; y: number }) {
-    item.value = itemData
-    position.value = mousePosition
-    visible.value = true
+  const inventoryType = ref<Inventory['type'] | null>(null)
+  const position = ref<Position>({ x: 0, y: 0 })
+  
+  // Method to show tooltip
+  function showTooltip(data: { 
+    item: SlotWithItem, 
+    inventoryType: Inventory['type'] 
+  }) {
+    item.value = data.item
+    inventoryType.value = data.inventoryType
+    isVisible.value = true
   }
 
-  // Close the tooltip
-  function closeTooltip() {
-    visible.value = false
+  // Method to hide tooltip
+  function hideTooltip() {
+    isVisible.value = false
     item.value = null
-    position.value = null
+    inventoryType.value = null
   }
 
-  // Update the tooltip position (during mouse movement)
-  function updatePosition(mousePosition: { x: number; y: number }) {
-    if (visible.value) {
-      position.value = mousePosition
-    }
+  // Method to track mouse position
+  function updatePosition(newPosition: Position) {
+    position.value = newPosition
   }
-
-  // Check if the tooltip has a valid item
-  const hasItem = computed(() => visible.value && item.value !== null)
-
-  return {
-    // State
-    visible,
-    item,
-    position,
-    hasItem,
-
-    // Actions
-    showTooltip,
-    closeTooltip,
-    updatePosition
+  
+  return { 
+    visible: isVisible, 
+    item, 
+    inventoryType, 
+    position, 
+    showTooltip, 
+    openTooltip: showTooltip, // Explicit alias for openTooltip pointing to showTooltip 
+    closeTooltip: hideTooltip, 
+    updatePosition 
   }
 })
