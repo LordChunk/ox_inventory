@@ -53,7 +53,7 @@ onMounted(() => {
 
 <template>
   <div v-if="inventoryVisible" class="inventory-container p-4 flex justify-center items-center fixed inset-0">
-    <div class="inventory-wrapper flex gap-4">
+    <div class="inventory-wrapper h-screen flex gap-4">
       <!-- Left Inventory -->
       <InventoryGrid 
         :inventory="inventoryStore.leftInventory" 
