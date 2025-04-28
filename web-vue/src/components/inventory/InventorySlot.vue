@@ -5,6 +5,7 @@ import { useTooltipStore } from '../../stores/tooltip'
 import { useItemsStore } from '../../stores/items'
 import { useDragStore } from '../../stores/drag'
 import { useInventoryStore } from '../../stores/inventory'
+import { useContextMenuStore } from '../../stores/contextMenu'
 import { moveItem, dropItem, useItem } from '../../utils/inventoryOperations'
 import WeightBar from '../utils/WeightBar.vue'
 import { isSlotWithItem } from '@/helpers'
@@ -22,6 +23,7 @@ const tooltipStore = useTooltipStore()
 const itemsStore = useItemsStore()
 const dragStore = useDragStore()
 const inventoryStore = useInventoryStore()
+const contextMenuStore = useContextMenuStore()
 
 // Refs
 const tooltipTimer = ref<number | null>(null)
@@ -32,15 +34,16 @@ const hasItem = computed(() => isSlotWithItem(props.item))
 
 // Format weight for display
 const formattedWeight = computed(() => {
-  if (!hasItem.value || props.item.weight <= 0) return ''
+  const weight = (props.item as SlotWithItem)?.weight
+  if (!hasItem.value || !weight || weight <= 0) return ''
 
-  if (props.item.weight >= 1000) {
-    return `${(props.item.weight / 1000).toLocaleString('en-us', {
+  if (weight >= 1000) {
+    return `${(weight / 1000).toLocaleString('en-us', {
       minimumFractionDigits: 2,
     })}kg `
   }
 
-  return `${props.item.weight.toLocaleString('en-us', {
+  return `${weight.toLocaleString('en-us', {
     minimumFractionDigits: 0,
   })}g `
 })
@@ -94,6 +97,13 @@ function handleMouseLeave() {
 }
 
 // Drag events
+function handleMouseDown(event: MouseEvent) {
+  // Only start drag on left click (button 0)
+  if (event.button === 0 && canDragItem()) {
+    handleDragStart(event)
+  }
+}
+
 function handleDragStart(event: MouseEvent) {
   // Only allow dragging if the slot has an item
   if (!hasItem.value) return
@@ -149,24 +159,20 @@ function handleDrop() {
 
 // Handle item moves between slots/inventories
 function processDrop(source: any, target: any) {
-  // Different actions based on source inventory type
   const sourceInventory = source.inventory
 
   if (sourceInventory === props.inventoryType && source.item.slot === props.item.slot) {
-    // Dropped on itself - do nothing
     return
   }
 
-  // Always use 1 as the count for now (in a real app, you'd consider the itemAmount from the store)
-  const count = 1
+  // Use the item amount from the store or default to 1
+  const count = inventoryStore.itemAmount || 1
 
-  // Process the move between slots
   moveItem(
     source.item.slot,
     source.inventory,
     target.item.slot,
-    target.inventory,
-    count
+    target.inventory
   )
 }
 
@@ -195,8 +201,11 @@ function handleContextMenu(event: MouseEvent) {
 
   if (props.inventoryType !== 'player' || !hasItem.value) return
 
-  console.log('Opening context menu for item:', props.item)
-  // To be implemented for context menu
+  // Open context menu with current item and coordinates
+  contextMenuStore.openContextMenu({
+    item: props.item as SlotWithItem,
+    coords: { x: event.clientX, y: event.clientY }
+  })
 }
 
 // Check if we can drag this item
@@ -211,7 +220,7 @@ function canDragItem() {
     :class="{ 'border-dashed border-white/40': isOver }"
     @click="handleClick"
     @contextmenu="handleContextMenu"
-    @mousedown="canDragItem() ? handleDragStart($event) : null"
+    @mousedown="handleMouseDown"
     @mouseenter="handleDragOver"
     @mouseleave="handleDragLeave"
     @mouseup="handleDrop"

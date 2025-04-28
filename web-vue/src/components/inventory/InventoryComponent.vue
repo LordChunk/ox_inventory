@@ -6,6 +6,7 @@ import InventoryGrid from './InventoryGrid.vue'
 import InventoryControl from './InventoryControl.vue'
 import Tooltip from '../utils/Tooltip.vue'
 import DragPreview from '../utils/DragPreview.vue'
+import InventoryContext from './InventoryContext.vue'
 import useNuiEvent from '../../composables/useNuiEvent'
 import { fetchNui } from '../../utils/fetchNui'
 import { debugData } from '../../utils/debugData'
@@ -71,6 +72,9 @@ onMounted(() => {
         :inventoryType="inventoryStore.rightInventory.type"
       />
     </div>
+
+    <!-- Add context menu -->
+    <InventoryContext />
 
     <!-- Exit button -->
     <button
