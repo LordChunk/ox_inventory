@@ -33,14 +33,14 @@ const gridSlots = computed(() => {
     slot: index + 1,
     isEmpty: true
   }))
-  
+
   // Mark slots that have items
   props.inventory.items.forEach(item => {
     if (item.slot <= props.inventory.slots) {
       slots[item.slot - 1] = item
     }
   })
-  
+
   return slots
 })
 
@@ -50,7 +50,7 @@ const page = ref(0)
 </script>
 
 <template>
-  <div 
+  <div
     class="inventory-grid-wrapper w-[370px] bg-slate-800 rounded shadow-lg p-4"
     :class="{ 'pointer-events-none': inventoryStore.isBusy }"
   >
@@ -62,11 +62,11 @@ const page = ref(0)
           {{ (weight / 1000).toFixed(2) }}/{{ (inventory.maxWeight / 1000).toFixed(2) }}kg
         </p>
       </div>
-      
+
       <!-- Weight bar -->
       <WeightBar :percent="weightPercent" />
     </div>
-    
+
     <!-- Grid of slots -->
     <div class="inventory-grid-container grid grid-cols-5 gap-1 mt-2">
       <!-- Render all slots (both filled and empty) -->

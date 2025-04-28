@@ -23,6 +23,7 @@ const initialState: State = {
   itemAmount: 0,
   shiftPressed: false,
   isBusy: false,
+  inventoryVisible: false,
 }
 
 export const useInventoryStore = defineStore('inventory', () => {
@@ -38,10 +39,15 @@ export const useInventoryStore = defineStore('inventory', () => {
   const itemAmount = computed(() => state.itemAmount)
   const isBusy = computed(() => state.isBusy)
   const shiftPressed = computed(() => state.shiftPressed)
+  const inventoryVisible = computed(() => state.inventoryVisible)
 
   // Actions (equivalent to Redux action creators and reducers)
   function setupInventoryState(payload: { leftInventory?: Inventory; rightInventory?: Inventory }) {
     setupInventory(state, payload)
+    // Set inventory as visible when setup is called
+    if (!state.inventoryVisible) {
+      state.inventoryVisible = true
+    }
   }
 
   function moveItem(data: {
@@ -124,6 +130,10 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
   }
 
+  function setInventoryVisible(visible: boolean) {
+    state.inventoryVisible = visible
+  }
+
   // Handle pending state (start of async operation)
   function setPending() {
     state.isBusy = true
@@ -161,6 +171,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     itemAmount,
     isBusy,
     shiftPressed,
+    inventoryVisible,
 
     // Actions
     setupInventory: setupInventoryState,
@@ -172,6 +183,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     setItemAmount,
     setShiftPressed,
     setContainerWeight,
+    setInventoryVisible,
     setPending,
     setFulfilled,
     setRejected

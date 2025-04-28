@@ -12,4 +12,5 @@ export type State = {
     leftInventory: Inventory;
     rightInventory: Inventory;
   };
+  inventoryVisible: boolean;
 };

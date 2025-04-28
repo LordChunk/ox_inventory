@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useInventoryStore } from '../../stores/inventory'
 import { useTooltipStore } from '../../stores/tooltip'
 import InventoryGrid from './InventoryGrid.vue'
@@ -15,12 +15,9 @@ import { debugData } from '../../utils/debugData'
 const inventoryStore = useInventoryStore()
 const tooltipStore = useTooltipStore()
 
-// State for inventory visibility
-const inventoryVisible = ref(false)
-
 // Handle inventory visibility events
 useNuiEvent<boolean>('setInventoryVisible', (visible) => {
-  inventoryVisible.value = visible
+  inventoryStore.setInventoryVisible(visible)
 
   // Reset tooltip when inventory visibility changes
   if (!visible) {
@@ -30,13 +27,13 @@ useNuiEvent<boolean>('setInventoryVisible', (visible) => {
 
 // Handle close inventory event
 useNuiEvent<void>('closeInventory', () => {
-  inventoryVisible.value = false
+  inventoryStore.setInventoryVisible(false)
   tooltipStore.closeTooltip()
 })
 
 // Exit inventory handler
 const handleExit = () => {
-  inventoryVisible.value = false
+  inventoryStore.setInventoryVisible(false)
   tooltipStore.closeTooltip()
   fetchNui('exit', {})
 }
@@ -54,7 +51,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="inventoryVisible" class="inventory-container p-4 flex justify-center items-center fixed inset-0">
+  <div v-if="inventoryStore.inventoryVisible" class="inventory-container p-4 flex justify-center items-center fixed inset-0">
     <div class="inventory-wrapper h-screen flex gap-4">
       <!-- Left Inventory -->
       <InventoryGrid
