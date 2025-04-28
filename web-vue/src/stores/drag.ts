@@ -104,7 +104,6 @@ export const useDragStore = defineStore('drag', () => {
     // Actions
     startDrag,
     updatePosition,
-    updateDragPosition: updatePosition, // Alias for backward compatibility
     handleDrop,
     endDrag
   }
