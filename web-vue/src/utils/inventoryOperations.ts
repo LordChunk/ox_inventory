@@ -4,106 +4,33 @@ import { fetchNui } from './fetchNui'
 import { canStack, isSlotWithItem } from '../helpers'
 
 // Get target inventories based on source and target types
-export function getTargetInventory(
+function getTargetInventory(
   sourceType: Inventory['type'],
   targetType?: Inventory['type']
 ): { sourceInventory: Inventory; targetInventory: Inventory } {
   const inventoryStore = useInventoryStore()
-  
   return {
-    sourceInventory: 
-      sourceType === 'player' ? inventoryStore.leftInventory : inventoryStore.rightInventory,
-    targetInventory: 
-      targetType
-        ? targetType === 'player'
-          ? inventoryStore.leftInventory
-          : inventoryStore.rightInventory
-        : sourceType === 'player'
-          ? inventoryStore.rightInventory
-          : inventoryStore.leftInventory,
+    sourceInventory: sourceType === 'player' ? inventoryStore.leftInventory : inventoryStore.rightInventory,
+    targetInventory: targetType
+      ? targetType === 'player'
+        ? inventoryStore.leftInventory
+        : inventoryStore.rightInventory
+      : sourceType === 'player'
+      ? inventoryStore.rightInventory
+      : inventoryStore.leftInventory,
   }
 }
 
-// Perform swap between two slots
-export function swapSlots(
-  sourceInventory: Inventory,
-  targetInventory: Inventory,
-  fromSlot: SlotWithItem,
-  toSlot: SlotWithItem,
-  count: number
-) {
+// Determine the count to move based on item amount and available count
+function getMoveCount(sourceSlot: SlotWithItem): number {
   const inventoryStore = useInventoryStore()
-  
-  // Find the source and target items in the inventories
-  const sourceIndex = sourceInventory.items.findIndex(item => item.slot === fromSlot.slot)
-  const targetIndex = targetInventory.items.findIndex(item => item.slot === toSlot.slot)
-  
-  if (sourceIndex === -1 || targetIndex === -1) return
-  
-  // Clone the items to avoid direct mutation
-  const sourceItem = { ...sourceInventory.items[sourceIndex] } as SlotWithItem
-  const targetItem = { ...targetInventory.items[targetIndex] } as SlotWithItem
-  
-  // Swap slots
-  if (sourceInventory.id === targetInventory.id) {
-    // Same inventory, simple swap
-    inventoryStore.swapSlots({
-      fromSlot: sourceItem,
-      toSlot: targetItem,
-      fromType: sourceInventory.type,
-      toType: targetInventory.type,
-      count
-    })
-  } else {
-    // Different inventories
-    inventoryStore.swapSlots({
-      fromSlot: sourceItem,
-      toSlot: targetItem,
-      fromType: sourceInventory.type,
-      toType: targetInventory.type,
-      count
-    })
-  }
-}
+  const itemAmount = inventoryStore.itemAmount
 
-// Stack items of the same type
-export function stackSlots(
-  sourceInventory: Inventory,
-  targetInventory: Inventory,
-  fromSlot: SlotWithItem,
-  toSlot: SlotWithItem,
-  count: number
-) {
-  const inventoryStore = useInventoryStore()
-  
-  // Stack items when they're the same type
-  inventoryStore.stackSlots({
-    fromSlot,
-    toSlot,
-    fromType: sourceInventory.type,
-    toType: targetInventory.type,
-    count
-  })
-}
+  // If no specific amount is set, move one item
+  if (itemAmount === 0) return 1
 
-// Move an item to an empty slot
-export function moveSlots(
-  sourceInventory: Inventory,
-  targetInventory: Inventory,
-  fromSlot: SlotWithItem,
-  toSlot: { slot: number },
-  count: number
-) {
-  const inventoryStore = useInventoryStore()
-  
-  // Move item to empty slot
-  inventoryStore.moveSlots({
-    fromSlot,
-    toSlot,
-    fromType: sourceInventory.type,
-    toType: targetInventory.type,
-    count
-  })
+  // Return either the requested amount or maximum available
+  return Math.min(itemAmount, sourceSlot.count)
 }
 
 // Movement operations - main function that determines what kind of move to perform
@@ -111,76 +38,74 @@ export async function moveItem(
   fromSlot: number,
   fromType: string,
   toSlot: number,
-  toType: string,
-  count: number
+  toType: string
 ) {
   const inventoryStore = useInventoryStore()
-  
-  // Mark inventory as busy while operation is in progress
-  inventoryStore.setPending()
-  
+
   try {
-    // Get the source and target inventories
+    inventoryStore.setPending()
+
     const { sourceInventory, targetInventory } = getTargetInventory(fromType, toType)
-    
-    // Find the source item
+
     const sourceSlotItem = sourceInventory.items.find(item => item.slot === fromSlot) as SlotWithItem | undefined
-    
-    // Find if there's an item in the target slot
     const targetSlotItem = targetInventory.items.find(item => item.slot === toSlot)
-    
+
     if (!sourceSlotItem) {
       console.error('Source slot item not found')
       inventoryStore.setRejected()
       return false
     }
-    
-    console.log('Source item:', sourceSlotItem)
-    console.log('Target slot:', toSlot)
-    console.log('Target item exists:', !!targetSlotItem)
-    
-    // Optimistic UI update based on the type of operation
-    if (targetSlotItem) {
-      console.log('Target has item, checking if can stack')
-      
-      // Target slot has an item - check if we can stack
-      if (canStack(sourceSlotItem, targetSlotItem)) {
-        console.log('Stacking items')
-        // Stack items of same type
-        stackSlots(sourceInventory, targetInventory, sourceSlotItem, targetSlotItem as SlotWithItem, count)
-      } else {
-        console.log('Swapping items')
-        // Swap different items
-        swapSlots(sourceInventory, targetInventory, sourceSlotItem, targetSlotItem as SlotWithItem, count)
-      }
-    } else {
-      // Move to empty slot
-      console.log('Moving to empty slot:', toSlot)
-      moveSlots(sourceInventory, targetInventory, sourceSlotItem, { slot: toSlot }, count)
-    }
-    
-    // Send the update to the server for validation
-    const response = await fetchNui<boolean | number>('swapItems', { 
-      fromSlot, 
-      fromType, 
-      toSlot, 
-      toType, 
-      count 
-    }).catch(() => true) // In development mode, simulate success
-    
+
+    // Calculate the count to move
+    const count = getMoveCount(sourceSlotItem)
+
+    // Send the request to server first
+    const response = await fetchNui<boolean | number>('swapItems', {
+      fromSlot,
+      fromType,
+      toSlot,
+      toType,
+      count
+    })
+
     if (response === false) {
-      // Server rejected the move, roll back to previous state
-      console.log('Server rejected the move, rolling back')
       inventoryStore.setRejected()
       return false
     }
-    
+
+    // If we got here, the server accepted the move
+    if (targetSlotItem && isSlotWithItem(targetSlotItem)) {
+      if (canStack(sourceSlotItem, targetSlotItem)) {
+        inventoryStore.stackSlots({
+          fromSlot: sourceSlotItem,
+          toSlot: targetSlotItem,
+          fromType,
+          toType,
+          count
+        })
+      } else {
+        inventoryStore.swapSlots({
+          fromSlot: sourceSlotItem,
+          toSlot: targetSlotItem,
+          fromType,
+          toType
+        })
+      }
+    } else {
+      inventoryStore.moveSlots({
+        fromSlot: sourceSlotItem,
+        toSlot: { slot: toSlot },
+        fromType,
+        toType,
+        count
+      })
+    }
+
     // If the response is a number, it's the new container weight
     if (typeof response === 'number') {
       inventoryStore.setContainerWeight(response)
     }
-    
-    // Operation successful
+
     inventoryStore.setFulfilled()
     return true
   } catch (error) {
@@ -192,33 +117,58 @@ export async function moveItem(
 
 // Handle dropping an item on the ground
 export async function dropItem(slot: number, count: number) {
-  console.log(`Dropping ${count} items from slot ${slot}`)
+  const inventoryStore = useInventoryStore()
   try {
-    return await fetchNui<boolean>('dropItem', { slot, count })
+    inventoryStore.setPending()
+    const response = await fetchNui<boolean>('dropItem', { slot, count })
+    if (response) {
+      inventoryStore.setFulfilled()
+    } else {
+      inventoryStore.setRejected()
+    }
+    return response
   } catch (error) {
     console.error('Error dropping item:', error)
+    inventoryStore.setRejected()
     return false
   }
 }
 
-// Use an item 
+// Use an item
 export async function useItem(slot: number) {
-  console.log(`Using item in slot ${slot}`)
+  const inventoryStore = useInventoryStore()
   try {
-    return await fetchNui<boolean>('useItem', slot)
+    inventoryStore.setPending()
+    const response = await fetchNui<boolean>('useItem', slot)
+    if (response) {
+      inventoryStore.setFulfilled()
+    } else {
+      inventoryStore.setRejected()
+    }
+    return response
   } catch (error) {
     console.error('Error using item:', error)
+    inventoryStore.setRejected()
     return false
   }
 }
 
 // Give an item to another player
-export async function giveItem(slot: number, count: number) {
-  console.log(`Giving ${count} items from slot ${slot}`)
+export async function giveItem(slot: number) {
+  const inventoryStore = useInventoryStore()
   try {
-    return await fetchNui<boolean>('giveItem', { slot, count })
+    const count = inventoryStore.itemAmount || 1
+    inventoryStore.setPending()
+    const response = await fetchNui<boolean>('giveItem', { slot, count })
+    if (response) {
+      inventoryStore.setFulfilled()
+    } else {
+      inventoryStore.setRejected()
+    }
+    return response
   } catch (error) {
     console.error('Error giving item:', error)
+    inventoryStore.setRejected()
     return false
   }
 }
