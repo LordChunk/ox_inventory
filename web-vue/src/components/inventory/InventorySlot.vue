@@ -165,15 +165,33 @@ function processDrop(source: any, target: any) {
     return
   }
 
-  // Use the item amount from the store or default to 1
-  const count = inventoryStore.itemAmount || 1
-
-  moveItem(
-    source.item.slot,
-    source.inventory,
-    target.item.slot,
-    target.inventory
-  )
+  if (sourceInventory === 'shop' && target.inventory !== 'shop') {
+    // Handle buying from shop
+    fetchNui('buyItem', {
+      fromSlot: source.item.slot,
+      toSlot: target.item.slot,
+      fromType: source.inventory,
+      toType: target.inventory,
+      count: inventoryStore.itemAmount || 1
+    })
+  } else if (sourceInventory === 'crafting' && target.inventory !== 'crafting') {
+    // Handle crafting
+    fetchNui('craftItem', {
+      fromSlot: source.item.slot,
+      toSlot: target.item.slot,
+      fromType: source.inventory,
+      toType: target.inventory,
+      count: inventoryStore.itemAmount || 1
+    })
+  } else {
+    // Regular item movement
+    moveItem(
+      source.item.slot,
+      source.inventory,
+      target.item.slot,
+      target.inventory
+    )
+  }
 }
 
 // Handle click events (for using items)
