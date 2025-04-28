@@ -1,35 +1,35 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { useDragStore } from '../../stores/drag'
 
 const dragStore = useDragStore()
 
-// Handle mouse move events for drag operations
-const handleMouseMove = (event: MouseEvent) => {
-  if (dragStore.isDragging) {
-    dragStore.updatePosition({ x: event.clientX, y: event.clientY })
+const isDragging = computed(() => dragStore.isDragging)
+const currentPosition = computed(() => dragStore.currentPosition)
+const image = computed(() => dragStore.image)
+
+function updateDragPosition(e: MouseEvent) {
+  if (isDragging.value) {
+    dragStore.updatePosition({ x: e.clientX, y: e.clientY })
   }
 }
 
-// Handle mouse up events to end drag operations
-const handleMouseUp = () => {
-  if (dragStore.isDragging) {
-    dragStore.endDrag()
-  }
-}
-
-// Add and remove event listeners
-onMounted(() => {
-  window.addEventListener('mousemove', handleMouseMove)
-  window.addEventListener('mouseup', handleMouseUp)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('mousemove', handleMouseMove)
-  window.removeEventListener('mouseup', handleMouseUp)
-})
+// Listen for mouse movement when dragging
+window.addEventListener('mousemove', updateDragPosition)
 </script>
 
 <template>
-  <!-- This is an invisible component that just manages event listeners -->
+  <div
+    v-if="isDragging && currentPosition"
+    class="fixed pointer-events-none w-16 h-16 -translate-x-1/2 -translate-y-1/2 z-50"
+    :style="{
+      left: `${currentPosition.x}px`,
+      top: `${currentPosition.y}px`,
+      backgroundImage: image,
+      backgroundSize: 'contain',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      opacity: '0.8'
+    }"
+  />
 </template>

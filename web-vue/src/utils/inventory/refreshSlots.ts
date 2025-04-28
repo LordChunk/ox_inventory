@@ -2,13 +2,13 @@ import type { Slot, State } from '../../typings'
 import { getItemData, itemDurability } from '../../utils/helpers'
 import { useItemsStore } from '../../stores/items'
 
-export type ItemsPayload = { item: Slot; inventory?: string }; // Allow string for inventory id
+export type ItemsPayload = { item: Slot; inventory?: string }
 
-interface Payload {
-  items?: ItemsPayload | ItemsPayload[];
-  itemCount?: Record<string, number>;
-  weightData?: { inventoryId: string; maxWeight: number };
-  slotsData?: { inventoryId: string; slots: number };
+export interface Payload {
+  items?: ItemsPayload | ItemsPayload[]
+  itemCount?: Record<string, number>
+  weightData?: { inventoryId: string; maxWeight: number }
+  slotsData?: { inventoryId: string; slots: number }
 }
 
 export function refreshSlots(state: State, payload: Payload) {

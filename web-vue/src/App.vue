@@ -11,6 +11,7 @@ import useNuiEvent from './composables/useNuiEvent';
 import { fetchNui } from './utils/fetchNui';
 import type { Inventory } from './typings';
 import { setImagePath } from './helpers';
+import type { Payload } from './utils/inventory/refreshSlots';
 
 // Get stores for state management
 const inventoryStore = useInventoryStore()
@@ -26,11 +27,11 @@ useNuiEvent<{
   leftInventory: Inventory
   imagepath: string
 }>('init', ({ locale, items, leftInventory, imagepath }) => {
-  
+
   for (const name in items) {
     itemsStore.setItem(name, items[name])
   }
-  
+
   // Set image path and initialize inventory
   setImagePath(imagepath)
   inventoryStore.setupInventory({ leftInventory })
@@ -45,7 +46,7 @@ useNuiEvent<{
 })
 
 // Handle slot refresh events
-useNuiEvent('refreshSlots', (data) => {
+useNuiEvent<Payload>('refreshSlots', (data) => {
   inventoryStore.refreshSlots(data)
 })
 
